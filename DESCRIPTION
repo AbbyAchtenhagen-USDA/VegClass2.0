@@ -1,0 +1,17 @@
+Package: vegClass2.0
+Title: Vegetation Classification 
+Version: 0.0.0.9000
+Authors@R: 
+    c(person("Mark", "Castle", email = "mark.castle@usda.gov", 
+          	  role=c("aut","cre")),
+	     person("Mike", "Shettles", email = "michael.a.shettles@usda.gov",
+		 role = c("aut")),
+		 person("Abby", "Achtenhagen", email = "abby.achtenhagen@usda.giv",
+		 role = c("aut")))
+Description: This package provides a suite of functions that are used to derive
+ vegetation classifications from Forest Vegetation Simulator output. It has been 
+ updated to use parallel processing for faster classification. 
+License: MIT
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0

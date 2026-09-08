@@ -1,0 +1,2070 @@
+################################################################################
+#Function: fvsGaak
+#
+#This function creates a FVS_GroupAddFilesAndKeyword (GAAK) table with the
+#appropriate SQL statements for a variety of grouping codes.
+#
+#Arguments
+#
+#dbName: Character string corresponding to name of database used in GAAK table.
+#        By default this value is set to FVS_Data. A .db extension will be
+#        appended to the value specified in dbName.
+#
+#type:   Variable to determine what grouping codes are included in GAAK table.
+#        1 = Standard FVS grouping codes (All_Stands, All_Plots)
+#        2 = FIA grouping codes (All_FIA_Conditions, All_FIA_Plots,
+#            All_FIA_Subplots)
+#        3 = Both standard FVS grouping codes and FIA grouping codes
+#        Default value for type argument is 2.
+#
+#Return value
+#
+#Dataframe containing gaak table
+################################################################################
+
+##'
+#' Create FVS GroupAddFilesAndKeywords Table (fvsGaak)
+#'
+#' Creates a FVS_GroupAddFilesAndKeyword (GAAK) table with the appropriate SQL statements for a variety of grouping codes.
+#'
+#' @param dbName Character string corresponding to name of database used in GAAK table. Default is "FVS_Data". A .db extension will be appended.
+#' @param type Integer to determine what grouping codes are included in GAAK table. 1 = Standard FVS grouping codes, 2 = FIA grouping codes, 3 = Both. Default is 2.
+#'
+#' @returns Data frame containing the GAAK table.
+#'
+#' @examples
+#' fvsGaak(dbName = "FVS_Data", type = 2)
+#'
+#' @export
+fvsGaak<-function(dbName="FVS_Data", type = 2)
+{
+  #Capture invalid type argument values
+  if(type < 1 | type > 3) type = 2
+
+  #Create dataframe containing FVS_GroupAddfilesAndKeywords table
+  gaak<-data.frame(GROUPS = c("All_Stands","All_Plots","All_FIA_Conditions",
+                              "All_FIA_Plots", "All_FIA_Subplots"),
+                   ADDFILES = c("","","","",""),
+                   FVSKEYWORDS = c(paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_StandInit",
+                                         "WHERE Stand_ID = '%StandID%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit",
+                                         "WHERE Stand_ID ='%StandID%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_PlotInit",
+                                         "WHERE StandPlot_ID = '%StandID%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit",
+                                         "WHERE StandPlot_ID ='%StandID%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_StandInit_Cond",
+                                         "WHERE Stand_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Cond",
+                                         "WHERE Stand_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"),
+                                         "StandSQL", "SELECT *",
+                                         "FROM  FVS_StandInit_Plot",
+                                         "WHERE Stand_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Plot",
+                                         "WHERE Stand_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_PlotInit_Plot",
+                                         "WHERE StandPlot_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Plot",
+                                         "WHERE StandPlot_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n")))
+
+  #GAAK with just FVS grouping codes
+  if(type == 1)
+  {
+    gaak<-gaak[1:2,]
+  }
+
+  #GAAK with just FIA grouping codes
+  if(type == 2)
+  {
+    gaak<-gaak[3:5,]
+  }
+
+  return(gaak)
+}
+
+################################################################################
+#Function: pvCodes
+#
+#This function returns a vector of USFS Region 3 Plant Association codes (PV
+#code). This function is called in pvConvert to crosswalk PV Code to ERU.
+#
+#Argument
+#
+#None
+#
+#Return value
+#
+#Vector containing PV Codes
+################################################################################
+
+#Region 3 PV codes dimensioned by 7 values per row
+##'
+#' Get USFS Region 3 Plant Association Codes (pvCodes)
+#'
+#' Returns a vector of USFS Region 3 Plant Association codes (PV codes).
+#' This function is called in pvConvert to crosswalk PV Code to ERU.
+#'
+#' @returns Character vector containing PV Codes.
+#'
+#' @examples
+#' pvCodes()
+#'
+#' @export
+pvCodes<-function(){
+  PVCODE<-c(
+  "006090",  "238300",  "012330",  "012331",  "012332",  "012430",  "01239",
+  "01203",   "012320",  "012140",  "012141",  "012143",  "012142",  "012341",
+  "012340",  "01213",   "12999",   "01241",   "012380",  "012350",  "012361",
+  "012360",  "012362",  "012420",  "001040",  "001041",  "001042",  "001130",
+  "001120",  "001022",  "001021",  "001150",  "001050",  "001052",  "001054",
+  "001053",  "001051",  "001090",  "001141",  "001140",  "001111",  "011130",
+  "001060",  "4999",    "3999",    "003300",  "003301",  "003090",  "003370",
+  "003320",  "003111",  "003112",  "003110",  "003310",  "003080",  "003350",
+  "003060",  "003240",  "003231",  "003200",  "003203",  "003201",  "003202",
+  "00604",   "004320",  "00435",   "004351",  "004350",  "004340",  "004060",
+  "004061",  "004062",  "004300",  "004330",  "004310",  "004360",  "00415",
+  "004152",  "004151",  "001100",  "238040",  "238310",  "006130",  "006060",
+  "006080",  "006010",  "006070",  "006071",  "012333",  "01231",   "240300",
+  "001080",  "001081",  "001160",  "001020",  "011092",  "011093",  "011091",
+  "011090",  "011470",  "011380",  "011030",  "011032",  "011033",  "011031",
+  "011350",  "011400",  "011330",  "011460",  "011340",  "011341",  "011390",
+  "011391",  "011392",  "011035",  "011210",  "011215",  "011211",  "011212",
+  "011214",  "011213",  "011216",  "011500",  "640999",  "032010",  "32999",
+  "032030",  "033020",  "033010",  "033030",  "011410",  "011411",  "011034",
+  "011440",  "011361",  "011360",  "011430",  "011420",  "011220",  "011320",
+  "011370",  "03101",   "630030",  "630050",  "630040",  "630043",  "232060",
+  "232050",  "630010",  "2040302", "2040301", "204360",  "9000042", "20431",
+  "204023",  "204022",  "204021",  "204024",  "204370",  "20406",   "204999",
+  "20411",   "20410",   "204300",  "204350",  "204500",  "231020",  "232030",
+  "23204",   "232999",  "233999",  "233020",  "233021",  "233022",  "2025002",
+  "2040303", "204050",  "20404",   "204321",  "202500",  "232330",  "233330",
+  "204330",  "232020",  "204320",  "231010",  "03102",   "232070",  "230030",
+  "230999",  "230040",  "230042",  "230041",  "233050",  "233030",  "233010",
+  "233041",  "233040",  "233042",  "204400",  "204011",  "204010",  "204012",
+  "20441",   "202020",  "231030",  "201040",  "201350",  "201020",  "201331",
+  "201332",  "201333",  "201340",  "201400",  "20140",   "202320",  "202321",
+  "202999",  "9000043", "201999",  "231021",  "231050",  "231040",  "201010",
+  "201011",  "231999",  "201410",  "202331",  "202330",  "31999",   "632999",
+  "630041",  "630042",  "620040",  "620030",  "620999",  "620010",  "620020",
+  "620021",  "630020",  "610020",  "610010",  "6500103", "650999",  "201420",
+  "201430",  "210999")
+
+  return(PVCODE)
+}
+
+################################################################################
+#Function: eru
+#
+#This function returns a vector of USFS Region 3 ERU codes. This function is
+#called in pvConvert to crosswalk PV Codes to ERU.
+#
+#Argument
+#
+#None
+#
+#Return value
+#
+#Vector containing USFS R3 ERU Codes
+################################################################################
+
+#Region 3 ERU codes dimensioned by 7 values per row
+##'
+#' Get USFS Region 3 ERU Codes (eru)
+#'
+#' Returns a vector of USFS Region 3 ERU codes. This function is
+#' called in pvConvert to crosswalk PV Codes to ERU.
+#'
+#' @returns Character vector containing USFS R3 ERU Codes.
+#'
+#' @examples
+#' eru()
+#'
+#' @export
+eru<-function(){
+  ERU<-c(
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "MCD", "MCD", "MCD", "MCD", "MCD", "MCD",
+  "MCD", "SFP", "SFP", "SFP", "SFP", "SFP", "SFP",
+  "SFP", "SFP", "SFP", "SFP", "SFP", "SFP", "SFP",
+  "SFP", "SFP", "SFP", "SFP", "SFP", "SFP", "SFP",
+  "SFM", "SFM", "SFM", "SFM", "SFM", "SFM", "SFM",
+  "SFM", "SFM", "SFM", "SFM", "SFM", "SFM", "SFM",
+  "SFM", "SFM", "SFM", "BPi", "BPi", "MCW", "MCW",
+  "MCW", "MCW", "MCW", "MCW", "MCW", "MCW", "MCW",
+  "MCW", "MCW", "MCW", "MCW", "PPG", "PPG", "PPG",
+  "PPG", "PPG", "PPG", "PPG", "PPG", "PPG", "PPG",
+  "PPG", "PPG", "PPG", "PPG", "PPG", "PPG", "PPG",
+  "PPG", "PPG", "PPO", "PPO", "PPO", "PPO", "PPO",
+  "PPO", "PPO", "PPO", "PPO", "GAM", "PPE", "PPE",
+  "PPE", "PPE", "PPE", "PPE", "PPE", "PPE", "PPE",
+  "PPE", "PPE", "PPE", "PPE", "PPE", "PPE", "PPE",
+  "PPE", "MPO", "MPO", "MPO", "MPO", "MPO", "MPO",
+  "MPO", "MPO", "MPO", "MPO", "MPO", "PJG", "PJG",
+  "PJG", "PJG", "PJG", "PJG", "PJG", "PJG", "PJG",
+  "PJG", "PJG", "PJG", "PJG", "PJG", "PJG", "PJG",
+  "PJG", "PJG", "PJG", "PJG", "PJG", "PJG", "PJO",
+  "PJO", "PJO", "PJO", "PJO", "PJO", "PJO", "PJO",
+  "PJO", "PJO", "PJO", "PJC", "PJC", "PJC", "PJC",
+  "PJC", "PJC", "PJC", "PJC", "PJC", "PJC", "PJC",
+  "PJC", "PJC", "PJC", "PJC", "PJS", "PJS", "PJS",
+  "PJS", "PJS", "JUG", "JUG", "JUG", "JUG", "JUG",
+  "JUG", "JUG", "JUG", "JUG", "JUG", "JUG", "JUG",
+  "JUG", "JUG", "JUG", "JUG", "JUG", "JUG", "JUG",
+  "JUG", "JUG", "JUG", "JUG", "JUG", "MEW", "MEW",
+  "MEW", "MEW", "MEW", "MEW", "MEW", "MEW", "MEW",
+  "MEW", "MEW", "MEW", "MEW", "MEW", "MEW", "SDG",
+  "SDG", "SDG")
+
+  return(ERU)
+}
+
+################################################################################
+#Function pvConvert
+#
+#This function converts input Plant Association code (PV code) to USFS Region
+#3 ERU code. If the input PV Code is not recognized, then a NA value is
+#returned.
+#
+#Arguments
+#
+#pv: input PV code.
+#
+#Return value
+#
+#ERU code.
+################################################################################
+
+##'
+#' Convert PV Code to ERU Code (pvConvert)
+#'
+#' Converts input Plant Association code (PV code) to USFS Region 3 ERU code. If the input PV Code is not recognized, returns NA.
+#'
+#' @param pv Input PV code.
+#'
+#' @returns ERU code (character) or NA if not found.
+#'
+#' @examples
+#' pvConvert("012330")
+#'
+#' @export
+pvConvert<-function(pv)
+{
+  #Search for pv in pvCodes
+  pvIndex<-match(pv, pvCodes())
+
+  #If pvIndex is not NA then extract eru based on pvIndex
+  if(!is.na(pvIndex))
+  {
+    value<-eru()[pvIndex]
+  }
+
+  else
+  {
+    value = NA
+  }
+
+  return(value)
+}
+
+################################################################################
+#Function addERUGroup
+#
+#This function adds an ERU group label to GROUPS column of FVS_STANDINIT,
+#FVS_PLOTINIT, FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, FVS_PLOTININT_PLOT for
+#PPF. This function is called from dbCompile when addERU is TRUE.
+#
+#Arguments
+#
+#group: character string of FVS group labels
+#
+#eru:   character string representing ERU code.
+#
+#Return value
+#
+#ERU code.
+################################################################################
+
+##'
+#' Add ERU Group Label (addERUGroup)
+#'
+#' Adds an ERU group label to GROUPS column of FVS_STANDINIT,
+#' FVS_PLOTINIT, FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, FVS_PLOTININT_PLOT for
+#' PPF. This function is called from dbCompile when addERU is TRUE.
+#'
+#' @param group Character string of FVS group labels.
+#' @param eru Character string representing ERU code.
+#'
+#' @returns Modified group string with ERU code(s) appended.
+#'
+#' @examples
+#' addERUGroup("GROUP1", "PPG")
+#'
+#' @export
+addERUGroup <- function(group, eru)
+{
+  #If eru is NA return group
+  if(is.na(eru))
+  {
+    return(group)
+  }
+
+  #Add ERU grouping code to group
+  group <- paste(group, paste0("ERU=", eru))
+
+  #If ERU is PPG or PPO, then add an additional grouping code for PPF
+  if(eru == 'PPG' | eru == 'PPO')
+  {
+    group <- paste(group, "ERU=PPF")
+  }
+
+  return(group)
+}
+
+################################################################################
+#Function: dbCompile
+#
+#This function is used to read in database tables from input FVS-ready data sets
+#and write the database tables from each of these to a single output SQLite
+#database. SQLite databases (.db) are the only compatible input database type
+#that can be processed in this function. The primary purpose of this function is
+#to combine input FVS databases into a single database or extract FVS database
+#tables from a larger database such as those on the FIA datamart.
+#
+#Arguments:
+#
+#dbIn:         Character vector of directory paths and file names for SQLite
+#              databases to process. Files can either be a SQLite database (.db)
+#              or zipped folder (.zip) which contains a SQLite database(s).
+
+#              NOTE: .zip files will be unzipped to a temporary folder called
+#              xxxvegClassdbCompileUnzipxxx in current working directory.
+#              Temporary folder will be deleted after dbCompile has finished
+#              writing data to output database.
+#
+#              Examples of valid dbIn formats:
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FIADB_AZ.db",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_AZ\\FIADB_AZ.db"
+#
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/ FIADB_AZ.zip",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_AZ\\ FIADB_AZ.zip "
+#
+#dbOut:       Character string corresponding to SQLite database to write out to.
+#
+#             Examples of valid dbOut formats:
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FVS_Data.db",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FVS_Data.db"
+#
+#dbTables:    Character vector of database tables to process from argument dbIn.
+#             By default this argument contains the following values:
+#             "FVS_STANDINIT"
+#             "FVS_TREEINIT"
+#             "FVS_PLOTINIT"
+#             "FVS_STANDINIT_PLOT"
+#             "FVS_STANDINIT_COND"
+#             "FVS_PLOTINIT_PLOT"
+#             "FVS_TREEINIT_PLOT"
+#             "FVS_TREEINIT_COND"
+#
+#buildGaak:   Logical variable used to determine if FVS_GROUPADDFILESANDKEYWORDS
+#             will be written to dbOut. If TRUE, this table will be written to
+#             dbOut. By default this argument is set to TRUE.
+#
+#gaakType:    Integer value from 1 - 3 used to determine what kind of GAAK table
+#             will be written to dbOut if buildGaak is TRUE.
+#             1: GAAK table with All_Stands and All_Plots grouping codes.
+#             2: GAAK table with All_FIA_Conditions, All_FIA_Plots,
+#                All_FIA_Subplots grouping codes.
+#             3: GAAK table with All_Stands, All_Plots, All_FIA_Conditions,
+#                All_FIA_Plots, All_FIA_Subplots grouping codes.
+#             For more information refer to fvsGaak function.
+#
+#addEru:      Logical variable used to determine if ERU should be added as a
+#             field in FVS_STANDINIT, FVS_PLOTINIT, FVS_STANDINIT_PLOT,
+#             FVS_STANDINIT_COND, and FVS_PLOTINIT_PLOT tables. In addition,
+#             ERU code will be added as a grouping code in the GROUPS field of
+#             these tables if addERU is TRUE. By default this argument is set to
+#             TRUE.
+#
+#deleteInput: Logical variable used to determine if values in dbIn should be
+#             deleted after dbCompile has been called. By default this argument
+#             is set to FALSE. Be careful with this argument. The primary
+#             purpose of this argument is to conserve hard disk space for users
+#             who do not want the input databases specified in dbIn.
+#
+#readChunks:  Logical variable used to determine if data from database table
+#             should be read in chunks. In general, processing time of dbCompile
+#             increases but less RAM is used in R session if this argument is
+#             TRUE. By default this argument is set to FALSE.
+#
+#rowsToRead:  Integer value corresponding to number of rows to read from a
+#             database table if readChunks is TRUE. By default this argument is
+#             set to 5000.
+#
+#Value
+#
+#Message indicating that database has been created.
+################################################################################
+
+##'
+#' Compile and Merge FVS SQLite Databases (dbCompile)
+#'
+#' Reads in database tables from input FVS-ready data sets and writes the
+#' database tables from each to a single output SQLite database. Can combine
+#' input FVS databases or extract FVS database tables from a larger database
+#' such as those on the FIA datamart.
+#'
+#' @param dbIn Character vector of directory paths and file names for SQLite databases to process. Files can be .db or .zip containing .db files.
+#' @param dbOut Character string for SQLite database to write out to.
+#' @param dbTables Character vector of database tables to process from dbIn. Default includes all standard FVS tables.
+#' @param buildGaak Logical; if TRUE, writes FVS_GROUPADDFILESANDKEYWORDS to dbOut. Default TRUE.
+#' @param gaakType Integer (1-3) for GAAK table type. See fvsGaak for details. Default 2.
+#' @param addERU Logical; if TRUE, adds ERU as a field and grouping code. Default TRUE.
+#' @param deleteInput Logical; if TRUE, deletes input databases after processing. Default FALSE.
+#' @param readChunks Logical; if TRUE, reads data in chunks to reduce RAM usage. Default FALSE.
+#' @param rowsToRead Integer; number of rows to read per chunk if readChunks is TRUE. Default 5000.
+#'
+#' @returns Message indicating that database has been created.
+#'
+#' @examples
+#' dbCompile(dbIn = "input.db", dbOut = "output.db", dbTables = c("FVS_STANDINIT", "FVS_TREEINIT","FVS_PLOTINIT", buildGaak = T)
+#'
+#' @export
+dbCompile <- function(dbIn = NULL,
+                      dbOut = NULL,
+                      dbTables = c("FVS_STANDINIT",
+                                   "FVS_TREEINIT",
+                                   "FVS_PLOTINIT",
+                                   "FVS_STANDINIT_PLOT",
+                                   "FVS_STANDINIT_COND",
+                                   "FVS_PLOTINIT_PLOT",
+                                   "FVS_TREEINIT_PLOT",
+                                   "FVS_TREEINIT_COND"),
+                      buildGaak = T,
+                      gaakType = 2,
+                      addERU = T,
+                      deleteInput = F,
+                      readChunks = F,
+                      rowsToRead = 5000)
+{
+
+  #Create directory where file will be unzipped to.
+  #If this file exists for any reason, delete it.
+  unzipDir <- paste(getwd(),
+                    "xxxvegClassdbCompileUnzipxxx",
+                    sep = "/")
+
+  if(file.exists(unzipDir))
+  {
+    deleteFiles(files = unzipDir,
+                recur = TRUE)
+  }
+
+  #Test if no values have been specified for dbIn
+  if(is.null(dbIn))
+  {
+    stop(paste("No files were specified for dbIn."))
+  }
+
+  #Test if no values have been specified for dbOut
+  if(is.null(dbOut))
+  {
+    stop(paste("No file was specified for dbOut."))
+  }
+
+  #Test if dbTables is null and return with error message.
+  if(is.null(dbTables))
+  {
+    stop(paste("No table names were provided for dbTables."))
+  }
+
+  #Print database tables to consider
+  else
+  {
+    #Capitalize dbTables
+    dbTables <- toupper(dbTables)
+
+    cat("Database table names to consider:",
+        dbTables,
+        "\n")
+  }
+
+  #Catch erroneous gaakType values
+  if(gaakType < 1 | gaakType > 3)
+  {
+    gaakType = 2
+  }
+
+  #Report error message if rowsToRead is less than or equal to 0
+  if(readChunks)
+  {
+    rowsToRead <- as.integer(rowsToRead)
+    if(rowsToRead <= 0)
+    {
+      stop(paste("Value for rowsToRead needs to be integer value greater than",
+                 "zero."))
+    }
+  }
+
+  #Replace \\ with / in dbIn and dbOut
+  dbIn <- gsub("\\\\", "/", dbIn)
+  dbOut <- gsub("\\\\", "/", dbOut)
+
+  #Loop through dbIn and test if any of the files don't exist. If a file does
+  #not exist then error message is reported.
+  for(i in 1:length(dbIn))
+  {
+    if(!file.exists(dbIn[i]))
+    {
+      stop(paste("File:",
+                 dbIn[i],
+                 "does not exist."))
+    }
+
+    else
+    {
+      cat("Database", i, dbIn[i], "\n")
+    }
+  }
+
+  #If there is more than one value specified in dbOut, stop with error message.
+  if(length(dbOut) > 1)
+  {
+    stop(paste("Only one output file can be specified for dbOut."))
+  }
+
+  #Test if dbOut file path is valid.
+  #Extract path to dbOut by extracting all characters before the last / in
+  #output argument.
+  outPath <- gsub("/[^/]+$", "", dbOut)
+
+  #Test existence of output path and if it does not exist report error.
+  if (!(file.exists(outPath))){
+    stop(paste("Path to output:", outPath, "was not found.",
+               "Make sure directory path to output is spelled correctly."))
+  }
+
+  #Test if output file is a SQLite database. If the file is not a SQLite
+  #database then error message is reported.
+  fileExtOut<-sub("(.*)\\.","",dbOut)
+  if(!fileExtOut %in% c("db", "sqlite"))
+  {
+    stop(paste("Output database:",
+         dbOut,
+         "is not a SQLite database.",
+         "\n"))
+  }
+
+  #If dbOut already exists, delete it
+  if(file.exists(dbOut))
+  {
+    cat(paste0("\n","Deleting preexisting dbOut"), "\n")
+    unlink(dbOut,
+           force = T)
+  }
+
+  cat("Output database:", dbOut, "\n","\n")
+
+  #Get updated directory paths and file names
+  dbInUpdate <- collectDBPaths(dbIn = dbIn)
+
+  #If dbInUpdate does not have any databases, then stop with error message and
+  #delete unzip directory if it exists.
+  if(length(dbInUpdate) <= 0)
+  {
+    #Check if unzipDir exists. If it does, delete it.
+    if(file.exists(unzipDir))
+    {
+
+      deleteFiles(files = unzipDir,
+                  recur = TRUE)
+    }
+
+    stop("No valid database files (.db, .sqlite) are available for processing.")
+  }
+
+  #Remove duplicate values in dbInUpdate and print database file paths
+  dbInUpdate <- unique(dbInUpdate)
+  cat("List of db files to process:", "\n")
+  cat(paste(dbInUpdate, collapse = "\n"))
+
+  #Begin processing databases in dbInUpdate
+  for(i in 1:length(dbInUpdate))
+  {
+
+    db <- dbInUpdate[i]
+
+    cat("\n")
+    cat("Processing db:", db, "\n", "\n")
+
+    #Begin processing dbTables in db
+    for(j in 1:length(dbTables))
+    {
+      #Extract table name
+      tableName <- dbTables[j]
+      cat("Processing table:",
+          tableName,
+          "\n")
+
+      #Connect to db
+      conIn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
+
+      #Test if table does not exist in db. if this is the case move to next
+      #iteration of loop.
+      if(!tableName %in% toupper(RSQLite::dbListTables(conIn)))
+      {
+        cat("Table:",
+            tableName,
+            "was not found in database.",
+            "\n", "\n")
+        #Disconnect from conIn
+        RSQLite::dbDisconnect(conIn)
+        next
+      }
+
+      #Determine number of rows in tableName
+      query <- paste("SELECT COUNT(1) FROM", tableName)
+      numRows <- RSQLite::dbGetQuery(conIn,
+                                     query)[[1]]
+
+      #If there are no rows (i.e. no data) in dbTable, skip to next iteration
+      #of loop.
+      if(numRows <= 0)
+      {
+        cat("No data found in",
+            tableName,
+            "\n", "\n")
+
+        #Disconnect from conIn
+        RSQLite::dbDisconnect(conIn)
+        next
+      }
+
+      #Disconnect from conIn
+      RSQLite::dbDisconnect(conIn)
+
+      #If readChunks is FALSE, call addDbTable, otherwise call addDbRows.
+      if(!readChunks)
+      {
+        addDbTable(db,
+                   dbOut,
+                   tableName,
+                   addERU)
+      }
+      else
+      {
+        addDbRows(db,
+                   dbOut,
+                   tableName,
+                   addERU,
+                   rowsToRead,
+                   numRows)
+      }
+    }
+
+    #Print message indicating which db has been processed.
+    cat("Finished processing db:",
+        db,
+        "\n")
+  }
+
+  #Determine if GAAK table should be written to dbOut.
+  if(buildGaak)
+  {
+    conOut <- RSQLite::dbConnect(RSQLite::SQLite(),
+                                 dbOut)
+
+    cat("Writing fvsGAAK table to",
+        dbOut,
+        "\n",
+        "\n")
+
+    RSQLite::dbWriteTable(conn = conOut,
+                          name = "FVS_GROUPADDFILESANDKEYWORDS",
+                          value = fvsGaak(type = gaakType),
+                          overwrite = T)
+
+    #Disconnect from conOut
+    RSQLite::dbDisconnect(conOut)
+  }
+
+  #If deleteInput is TRUE, delete files in dbIN argument.
+  if(deleteInput)
+  {
+
+    cat(paste("Argument deleteInput is TRUE.",
+              "Deleting input databases.", "\n"))
+    deleteFiles(files = dbIn,
+                recur = FALSE)
+  }
+
+  #Before returning, delete unzipDir if it exists.
+  if(file.exists(unzipDir))
+  {
+    deleteFiles(files = unzipDir,
+                recur = TRUE)
+  }
+
+  invisible(0)
+}
+
+################################################################################
+#Function: fvsGetCols
+#
+#This function returns a vector of field names corresponding to all columns
+#which can be included in a FVS input database.
+#
+#Arguments
+#
+#none
+#
+#Return value
+#Character vector of FVS column names
+################################################################################
+
+##'
+#' Get FVS Input Database Column Names (fvsGetCols)
+#'
+#' Returns a character vector of all column names that can be included in a FVS input database.
+#'
+#' @returns Character vector of FVS column names.
+#'
+#' @examples
+#' fvsGetCols()
+#'
+#' @export
+fvsGetCols <- function()
+{
+  #FVS variables from blank database templates
+  fvsVars =c(
+    "STAND_ID",      "VARIANT",      "INV_YEAR",     "GROUPS",
+    "ADDFILES",      "FVSKEYWORDS",  "GIS_LINK",     "PROJECT_NAME",
+    "LATITUDE",      "LONGITUDE",    "REGION",       "FOREST",
+    "DISTRICT",      "COMPARTMENT",  "LOCATION",     "ECOREGION",
+    "PV_CODE",       "PV_REF_CODE",  "AGE",          "ASPECT",
+    "SLOPE",         "ELEVATION",    "ELEVFT",       "BASAL_AREA_FACTOR",
+    "INV_PLOT_SIZE", "BRK_DBH",      "NUM_PLOTS",    "NONSTK_PLOTS",
+    "SAM_WT",        "STK_PCNT",     "DG_TRANS",     "DG_MEASURE",
+    "HTG_TRANS",     "HTG_MEASURE",  "MORT_MEASURE", "MAX_BA",
+    "MAX_SDI",       "SITE_SPECIES", "SITE_INDEX",   "MODEL_TYPE",
+    "PHYSIO_REGION", "FOREST_TYPE",  "STATE",        "COUNTY",
+    "FUEL_MODEL",    "FUEL_0_25_H",  "FUEL_25_1_H",  "FUEL_1_3_H",
+    "FUEL_3_6_H",    "FUEL_6_12_H",  "FUEL_12_20_H", "FUEL_20_35_H",
+    "FUEL_35_50_H",  "FUEL_GT_50_H",  "FUEL_0_25_S", "FUEL_25_1_S",
+    "FUEL_1_3_S",    "FUEL_3_6_S",   "FUEL_6_12_S",  "FUEL_12_20_S",
+    "FUEL_20_35_S",  "FUEL_35_50_S", "FUEL_GT_50_S", "FUEL_LITTER",
+    "FUEL_DUFF",     "PHOTO_REF",    "PHOTO_CODE",   "PLOT_ID",
+    "STANDPLOT_ID",  "TREE_ID",      "TREE_COUNT",   "HISTORY",
+    "SPECIES",       "DIAMETER",     "DG",           "HT",
+    "HTG",           "HTTOPK",       "CRRATIO",      "DAMAGE1",
+    "SEVERITY1",     "DAMAGE2",      "SEVERITY2",    "DAMAGE3",
+    "SEVERITY3",     "TREEVALUE",    "PRESCRIPTION", "TOPOCODE",
+    "SITEPREP",      "DBH",          "STAND_CN",     "STANDPLOT_CN")
+
+  return(fvsVars)
+}
+
+################################################################################
+#Function: fvsGetTypes
+#
+#This function returns a character vector containing data types associated with
+#values returned from fvsGetCols function.
+#
+#Arguments
+#
+#none
+#
+#Return value
+#Character vector of FVS field data types.
+################################################################################
+
+##'
+#' Get FVS Input Database Column Data Types (fvsGetTypes)
+#'
+#' Returns a character vector of data types associated with values returned from fvsGetCols().
+#'
+#' @returns Character vector of FVS field data types.
+#'
+#' @examples
+#' fvsGetTypes()
+#'
+#' @export
+fvsGetTypes <- function()
+{
+  #Datatypes for FVS variables
+  fvsTypes = c(
+    "character", "character", "integer",   "character",
+    "character", "character", "character", "character",
+    "double",    "double",    "integer",   "integer",
+    "integer",   "integer",   "integer",  "character",
+    "character", "integer",   "integer",   "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "integer",   "integer",
+    "double",    "double",    "integer",   "integer",
+    "integer",   "integer",   "integer",   "double",
+    "double",    "character", "double",    "integer",
+    "integer",   "integer",   "integer",   "integer",
+    "integer",   "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "integer",   "character", "double",
+    "character", "double",    "double",    "double",
+    "character", "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "double",    "double",
+    "double",    "double",    "character", "character")
+
+  return(fvsTypes)
+}
+
+################################################################################
+#Function: setDataTypes
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function accepts a dataframe and checks if all columns in the data frame
+#match a specified datatype. If a column does not match a specified data type,
+#the column in the dataframe is cast to the correct data type. Only double,
+#integer, and character values are considered in this function.
+#
+#Arguments
+#
+#data:     Input dataframe.
+#
+#cols:     Character vector of variable names.By default this argument
+#          is set  to NULL. When this value is NULL, variables will be
+#          set to values produced by fvsGetCols function. Length of variables
+#          argument must match length of types argument.
+#
+#colTypes: Character vector of data type types that correspond to variables in
+#          argument variables. By default this argument is set to NULL. When
+#          this value is NULL, variables will be set to values produced by
+#          fvsGetTypes function. Length of types argument must match length of
+#          types argument.
+#
+#debug:    Boolean variable that determines if debug information should be
+#          printed to console. By default this argument set to FALSE.
+#
+#Return value
+#
+#Input dataframe
+################################################################################
+
+##'
+#' Set Data Types for Data Frame Columns (setDataTypes)
+#'
+#' Not currently in use. Checks and sets data types for columns in a data frame to match specified types. Only double, integer, and character values are considered.
+#'
+#' @param data Input data frame.
+#' @param cols Character vector of variable names. Default NULL uses fvsGetCols().
+#' @param colTypes Character vector of data types for variables. Default NULL uses fvsGetTypes().
+#' @param debug Logical; if TRUE, prints debug output to R console. Default FALSE.
+#'
+#' @returns Data frame with columns cast to correct types.
+#'
+#' @examples
+#' setDataTypes(data.frame(A=1,B="2"), cols=c("A","B"), colTypes=c("integer","character"))
+#'
+#' @export
+setDataTypes<-function(data,
+                       cols = NULL,
+                       colTypes = NULL,
+                       debug = F)
+{
+
+  #If data is not dataframe stop with error message
+  if(!is.data.frame(data))
+  {
+    stop("Argument data must be a dataframe.")
+  }
+
+  #If data has no rows return
+  if(nrow(data) <= 0)
+  {
+    return("No data in input dataframe.")
+  }
+
+  #If cols is NULL, call fvsGetVars
+  if(is.null(cols))
+  {
+    cols = fvsGetCols()
+  }
+
+  #If colTypes is NULL, call fvsGetTypes
+  if(is.null(colTypes))
+  {
+    colTypes = fvsGetTypes()
+  }
+
+  #If length of variables is not equal to types, return with error.
+  if(length(cols) != length(colTypes))
+  {
+    if(debug) cat("Length cols:", length(cols), "\n")
+    if(debug) cat("Length types:", length(colTypes), "\n")
+    stop("Variables and types arguments must have the same length.")
+  }
+
+  #Iterate across columns of input dataframe
+  for(i in 1:length(names(data)))
+  {
+    colname<-toupper(names(data)[i])
+    if(debug) cat("Column:", colname, "being processed.", "\n")
+
+    #Attempt to match column name with variable in fvsvars
+    varIndex<-match(colname, cols)
+
+    #If varIndex is not NA, extract the data type for the column from colTypes.
+    if(!is.na(varIndex))
+    {
+      #Extract datatype from colTypes.
+      datatype<-colTypes[varIndex]
+
+      #If data type of column matches with designated data type, move to next
+      #loop iteration.
+      if(typeof(data[,i]) == datatype){
+        if(debug) cat("Data type of", colname, "is a match.", "\n")
+        next
+      }
+
+      #Variable is a character
+      if(datatype %in% c("character", "complex"))
+      {
+        #Print message that column will be converted to character.
+        if(debug) cat(colname, "being converted to", datatype, "\n")
+        data[,i]<-as.character(data[,i])
+      }
+
+      #Variable is a integer
+      if(datatype %in% c("integer", "logical"))
+      {
+        #Print message that column will be converted to integer.
+        if(debug) cat(colname, "being converted to", datatype, "\n")
+        data[,i]<-as.integer(data[,i])
+      }
+
+      #Variable is a double
+      if(datatype == "double")
+      {
+        #Print message that column will be converted to double.
+        if(debug) cat(colname, "being converted to", datatype, "\n")
+        data[,i]<-as.double(data[,i])
+      }
+    }
+
+    #If varIndex is NA it will be ignored.
+    else
+    {
+      if(debug) cat(colname, "not recognized and ignored.", "\n")
+    }
+  }
+
+  return(data)
+}
+
+################################################################################
+#Function: addDbTable
+#
+#This function sends an entire database table (expressed as dataframe) to
+#output SQLite database.
+#
+#Arguments
+#
+#db:         Directory path and file name to input database.
+#
+#dbOut:      Directory path and file name to output SQLite database.
+#
+#tableName:  Name of database table in db being sent to dbOut.
+#
+#addERU:     Logical variable indicating if ERU should be added to GROUPS column
+#            of FVS_STANDINIT tables (FIA or regular FVS versions). See
+#            dbCompile function for more details.
+#
+#Return value
+#
+#None
+################################################################################
+
+##'
+#' Add Database Table to Output SQLite Database (addDbTable)
+#'
+#' Sends an entire database table (as a data frame) to an output SQLite database.
+#'
+#' @param db Directory path and file name to input database.
+#' @param dbOut Directory path and file name to output SQLite database.
+#' @param tableName Name of database table in db being sent to dbOut.
+#' @param addERU Logical; if TRUE, adds ERU to GROUPS column of FVS tables. See dbCompile for details.
+#'
+#' @returns None
+#'
+#' @examples
+#' addDbTable("input.db", "output.db", "FVS_STANDINIT", TRUE)
+#'
+#' @export
+addDbTable<-function(db,
+                     dbOut,
+                     tableName,
+                     addERU)
+{
+
+  #Connect to input database (db)
+  conIn <- RSQLite::dbConnect(RSQLite::SQLite(),
+                              db)
+
+  #Read in the dbTable table (tableName)
+  dbTable <- RSQLite::dbReadTable(conIn,
+                                  name = tableName)
+
+  #Capitalize column headers
+  colnames(dbTable) <- toupper(colnames(dbTable))
+
+  #Get column data types from tableName
+  tableTypes <-getDataTypes(conIn,
+                            tableName)
+
+  #Determine if ERU needs to be added to dbTable
+  if(addERU & tableName %in% c("FVS_STANDINIT",
+                               "FVS_PLOTINIT",
+                               "FVS_STANDINIT_PLOT",
+                               "FVS_STANDINIT_COND",
+                               "FVS_PLOTINIT_PLOT"))
+  {
+    #Determine if PV_CODE and GROUPS fields exist in dbTable. If they don't,
+    #then ERU will not be cross walked or included in output database.
+    if(! "PV_CODE" %in% colnames(dbTable) | ! "GROUPS" %in% colnames(dbTable))
+    {
+      cat("PV_CODE and/or GROUPS column not found in",
+          tableName,
+          ".ERU cross walk will not occur.",
+          "\n")
+    }
+
+    #Cross walk PV_CODE to ERU
+    else
+    {
+      cat("Cross walking PV_CODE to ERU in", tableName, "\n")
+
+      #Determine if the FVS_STANDINIT_PLOT  or FVS_STANDINIT_COND table is being
+      #processed. If so, move values from PV_FIA_HABTYPCD1 to PV_CODE. The
+      #FVS_PLOTINIT_PLOT table seems to have the correct values in PV_CODE
+      #field in Region 3 FIA data.
+      if(tableName %in% c("FVS_STANDINIT_PLOT",
+                          "FVS_STANDINIT_COND") &
+         "PV_FIA_HABTYPCD1" %in% colnames(dbTable))
+      {
+        dbTable["PV_CODE"] <- dbTable["PV_FIA_HABTYPCD1"]
+      }
+
+      #Cross walk PV_CODE to ERU
+      dbTable$ERU<-mapply(pvConvert, dbTable$PV_CODE)
+
+      #Add ERU grouping code
+      dbTable$GROUPS<-mapply(addERUGroup,
+                             dbTable$GROUPS,
+                             dbTable$ERU)
+    }
+  }
+
+  #Disconnect from conIn
+  RSQLite::dbDisconnect(conIn)
+
+  #Connect to dbOut
+  conOut <- RSQLite::dbConnect(RSQLite::SQLite(),
+                               dbOut)
+
+  #Test if tableName exists in conOut. If it does, this dbTable will be
+  #appended to the existing table in output (conOut).
+  if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
+  {
+    #Identify any fields in dbTable that are missing from the same data table
+    #in conOut.
+    dbFields <- RSQLite::dbListFields(conOut,
+                                      name = tableName)
+
+    missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
+
+    #Loop through missingFields and add to database table in conOut
+    if(length(missingFields) > 0)
+    {
+      cat("\n",
+          "Fields missing from",
+          tableName,
+          "in",
+          dbOut,
+          "\n",
+          missingFields, "\n", "\n")
+
+      for(i in 1:length(missingFields))
+      {
+        #Extract field
+        field <- missingFields[i]
+
+        #Extract datatype of field
+        dataType <- tableTypes[names(tableTypes) == field]
+        cat("Field:", field, "dataType:", dataType, "\n")
+
+        cat("Adding field:",
+            field,
+            paste0("(", dataType, ")"),
+            "to table:",
+            tableName,
+            "\n")
+
+        #Create query to alter table and add field in conout
+        addField <-paste("ALTER TABLE",
+                         tableName,
+                         "ADD COLUMN",
+                         field,
+                         dataType)
+
+        #Add field to conOut
+        RSQLite::dbExecute(conOut, addField)
+
+        cat("Field:",
+            field,
+            "added to table:",
+            tableName,
+            "\n", "\n")
+      }
+    }
+
+    cat("Appending",
+        tableName,
+        "to",
+        dbOut,
+        "\n")
+
+    #Append data to conOut
+    RSQLite::dbWriteTable(conn = conOut,
+                          name = tableName,
+                          value = dbTable,
+                          append = T)
+
+    cat(tableName,
+        "appended to",
+        dbOut,
+        "\n",
+        "\n")
+  }
+
+  #Table will be created in conOut and data will then be written to the table.
+  else
+  {
+    cat("Writing",
+        tableName,
+        "to",
+        dbOut,
+        "\n")
+
+    #Create the dbTable in conOut and write information from dbTable to it.
+    RSQLite::dbWriteTable(conn = conOut,
+                          name = tableName,
+                          value = dbTable,
+                          overwrite = T,
+                          field.types = tableTypes)
+
+    cat(tableName,
+        "written to",
+        dbOut,
+        "\n",
+        "\n")
+  }
+
+  #Delete dbTable
+  rm(dbTable)
+
+  #Disconnect from conOut
+  RSQLite::dbDisconnect(conOut)
+
+  invisible(0)
+}
+
+################################################################################
+#Function: addDbRows
+#
+#This function incrementally sends portions of a database table (expressed as
+#dataframe) to output SQLite database.
+#
+#Arguments
+#
+#db:         Directory path to input SQLite database.
+#
+#dbOut:      Directory path to output SQLite database.
+#
+#tableName:  Name of database table being sent from db to dbOut.
+#
+#addERU:     Logical variable indicating if ERU should be added to GROUPS column
+#            of FVS_STANDINIT tables (FIA or regular FVS versions). See
+#            dbCompile function for more details.
+#
+#numToRead:  Number of rows to read in from database table at a time.
+#
+#numRows:    Number of rows in argument tableName.
+#
+#Return value
+#
+#None
+################################################################################
+
+##'
+#' Add Rows to Database Table in Output SQLite Database (addDbRows)
+#'
+#' Incrementally sends portions of a database table (as a data frame) to an output SQLite database.
+#'
+#' @param db Directory path to input SQLite database.
+#' @param dbOut Directory path to output SQLite database.
+#' @param tableName Name of database table being sent from db to dbOut.
+#' @param addERU Logical; if TRUE, adds ERU to GROUPS column of FVS tables. See dbCompile for details.
+#' @param numToRead Number of rows to read in from database table at a time.
+#' @param numRows Number of rows in argument tableName.
+#'
+#' @returns None
+#'
+#' @examples
+#' addDbRows("input.db", "output.db", "FVS_STANDINIT", TRUE, 1000, 5000)
+#'
+#' @export
+addDbRows<-function(db,
+                    dbOut,
+                    tableName,
+                    addERU,
+                    numToRead,
+                    numRows)
+{
+
+  #Variable to signify when read of data from tableName in db is complete
+  doneReading <- F
+
+  #Lower value of rows to read from
+  lower <- 0
+
+  #Upper value of rows to read from. Upper value is only used in messages sent
+  #to console.
+  upper <- 0
+
+  #Variable used to keep track of number of rows that have been processed
+  rowsDone <- 0
+
+  #Variable to indicate whether first pass is complete.
+  firstPass <- T
+
+  while(!doneReading)
+  {
+    # If this is the first pass, set lower to 1 and upper to numToRead. Then
+    #set firstPass to F.
+    if(firstPass)
+    {
+      upper <- numToRead
+      firstPass <- F
+    }
+
+    #If this is not the first pass then set lower to lower + numToRead and
+    #upper to upper + NumToRead
+    else
+    {
+      lower <- lower + numToRead
+      upper <- upper + numToRead
+    }
+
+    #If upper is greater than or equal to numRows, set numToRead to
+    #numRows - rowsDone and set doneReading to T. This will signify that
+    #function is about to make the last read from db.
+    if(upper >= numRows)
+    {
+      numToRead <- numRows - rowsDone
+      upper <- numRows
+      doneReading <- T
+    }
+
+    #Setup query for reading data
+    query <- paste("SELECT * FROM",
+                   tableName,
+                   "LIMIT",
+                   paste0(lower,",", numToRead))
+
+    cat("Row query:",
+        query,
+        "\n")
+
+    #Display what rows are being read from database table.
+    cat("Reading rows:",
+        lower + 1,
+        "through",
+        upper,
+        "from",
+        tableName, "\n")
+
+    #Connect to db
+    conIn <- RSQLite::dbConnect(RSQLite::SQLite(),
+                                db)
+
+    #Read the data
+    dbTable <- RSQLite::dbGetQuery(conIn,
+                                   query)
+
+    #Get column data types from tableName
+    tableTypes <-getDataTypes(conIn,
+                              tableName)
+
+    #Disconnect from db
+    RSQLite::dbDisconnect(conIn)
+
+    #Determine number of rows read in current pass
+    rowsRead <- nrow(dbTable)
+
+    #Print number of rows in dbTable
+    cat("Number of rows in read from database:",
+        rowsRead,
+        "\n")
+
+    #Capitalize column headers
+    colnames(dbTable) <- toupper(colnames(dbTable))
+
+    #Determine if ERU needs to be added to dbTable
+    if(addERU & tableName %in% c("FVS_STANDINIT",
+                                 "FVS_PLOTINIT",
+                                 "FVS_STANDINIT_PLOT",
+                                 "FVS_STANDINIT_COND",
+                                 "FVS_PLOTINIT_PLOT"))
+    {
+      #Determine if PV_CODE and GROUPS fields exist in dbTable. If they don't,
+      #then ERU will not be cross walked or be included in output database.
+      if(! "PV_CODE" %in% colnames(dbTable) | ! "GROUPS" %in% colnames(dbTable))
+      {
+        cat("PV_CODE and/or GROUPS column not found in",
+            tableName,
+            ".ERU cross walk will not occur.",
+            "\n")
+      }
+
+      #Cross walk PV_CODE to ERU
+      else
+      {
+        cat("Cross walking PV_CODE to ERU in", tableName, "\n")
+
+        #Determine if the FVS_STANDINIT_PLOT  or FVS_STANDINIT_COND table is
+        #being processed. If so, move values from PV_FIA_HABTYPCD1 to PV_CODE.
+        #The FVS_PLOTINIT_PLOT table seem to have the correct values in PV_CODE
+        #field in Region 3 FIA data.
+        if(tableName %in% c("FVS_STANDINIT_PLOT",
+                            "FVS_STANDINIT_COND") &
+           "PV_FIA_HABTYPCD1" %in% colnames(dbTable))
+        {
+          dbTable["PV_CODE"] <- dbTable["PV_FIA_HABTYPCD1"]
+        }
+
+        #Cross walk PV_CODE to ERU
+        dbTable$ERU<-mapply(pvConvert, dbTable$PV_CODE)
+
+        #Add ERU grouping code
+        dbTable$GROUPS<-mapply(addERUGroup,
+                               dbTable$GROUPS,
+                               dbTable$ERU)
+      }
+    }
+
+    #Connect to dbOut
+    conOut <- RSQLite::dbConnect(RSQLite::SQLite(),
+                                 dbOut)
+
+    #Test if tableName exists in conOut. If it does, this dbTable will be
+    #appended to the existing table in output (conOut).
+    if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
+    {
+      #Identify any fields in dbTable that are missing from the same data table
+      #in conOut.
+      dbFields <- RSQLite::dbListFields(conOut,
+                                        name = tableName)
+
+      missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
+
+      #Loop through missingFields and add to database table in conOut
+      if(length(missingFields) > 0)
+      {
+        cat("\n",
+            "Fields missing from",
+            tableName,
+            "in",
+            dbOut,
+            "\n",
+            missingFields, "\n", "\n")
+
+        for(i in 1:length(missingFields))
+        {
+          #Extract field
+          field <- missingFields[i]
+
+          #Extract datatype of field
+          dataType <- tableTypes[names(tableTypes) == field]
+          cat("Field:", field, "dataType:", dataType, "\n")
+
+          cat("Adding field:",
+              field,
+              paste0("(", dataType, ")"),
+              "to table:",
+              tableName,
+              "\n")
+
+          #Create query to alter table and add field in conout
+          addField <-paste("ALTER TABLE",
+                           tableName,
+                           "ADD COLUMN",
+                           field,
+                           dataType)
+
+          #Add field to conOut
+          RSQLite::dbExecute(conOut, addField)
+
+          cat("Field:",
+              field,
+              "added to table:",
+              tableName,
+              "\n", "\n")
+        }
+      }
+
+      cat("Appending rows", lower + 1, "through", upper, "from",
+          tableName,
+          "to",
+          dbOut,
+          "\n")
+
+      #Append data to conOut
+      RSQLite::dbWriteTable(conn = conOut,
+                            name = tableName,
+                            value = dbTable,
+                            append = T)
+
+      cat("Rows", lower + 1, "through", upper, "from", tableName,
+          "appended to",
+          dbOut,
+          "\n")
+    }
+
+    #Table will be created in conOut and data will then be written to the
+    #table.
+    else
+    {
+
+      cat("Writing rows", lower + 1, "through", upper, "from",
+          tableName,
+          "to",
+          dbOut,
+          "\n")
+
+      #Create the dbTable in conOut and write information from dbTable to it.
+      RSQLite::dbWriteTable(conn = conOut,
+                            name = tableName,
+                            value = dbTable,
+                            overwrite = T,
+                            field.types = tableTypes)
+
+      cat("Rows", lower + 1, "through", upper, "from", tableName,
+          "written to",
+          dbOut,
+          "\n")
+    }
+
+    #Update rowsDone
+    rowsDone <- rowsDone + rowsRead
+
+    #Print number of rows processed
+    cat("Number of rows processed:",
+        rowsDone,
+        "\n",
+        "\n")
+
+    #Delete dbTable
+    rm(dbTable)
+
+    #Disconnect from dbOut
+    RSQLite::dbDisconnect(conOut)
+  }
+
+  invisible(0)
+}
+
+################################################################################
+#convertType
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function maps R data types to SQLite data types or SQLite data types to
+#R data types depending on the value specified in the input type argument.
+#
+#Arguments
+#
+#value:   Character string corresponding to an R or SQLite data type
+#
+#type:    Integer variable used to determine if converting to R data type
+#         or SQLite data type.
+#         1: Convert to SQLite data type
+#         2: Convert to R data type
+#
+#Value
+#
+#Character string corresponding to R of SQLite data type
+################################################################################
+
+##'
+#' Convert Between R and SQLite Data Types (convertType)
+#'
+#' Maps R data types to SQLite data types or vice versa, depending on the type argument.
+#'
+#' @param value Character string corresponding to an R or SQLite data type.
+#' @param type Integer; 1 = convert to SQLite type, 2 = convert to R type. Default 1.
+#'
+#' @returns Character string corresponding to R or SQLite data type.
+#'
+#' @examples
+#' convertType("double", 1)
+#' convertType("INTEGER", 2)
+#'
+#' @export
+convertType <- function(value,
+                        type = 1)
+{
+  dataType <- NA
+
+  #Convert to SQLite database type from R data type
+  if(type == 1)
+  {
+    if(value %in% c("double"))
+    {
+      dataType <- "REAL"
+    }
+
+    else if(value %in% c("integer", "logical"))
+    {
+      dataType <- "INTEGER"
+    }
+
+    else
+    {
+      dataType <- "TEXT"
+    }
+  }
+
+  #Convert to R data type from SQLite data type. SQLite data types are based on
+  #those specified in PRAGMA table_info(name of table)
+  else
+  {
+    if(value %in% c("INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT",
+                    "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8", "BOOLEAN"))
+    {
+      dataType <- "integer"
+    }
+
+    else if(value %in% c("REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT",
+                         "NUMERIC", "DECIMAL(10,5)"))
+    {
+      dataType <- "double"
+    }
+
+    else
+    {
+      dataType <- "character"
+    }
+  }
+
+  return(dataType)
+}
+
+################################################################################
+#checkDataTypes
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function is used to determine if column data types in an input dataframe
+#match the field types in a table from a SQLite database where information in
+#dataframe will be inserted. If a column type in the dataframe does not match
+#the data type of the field in the SQLite database, then the column in the
+#dataframe is cast to the correct type. This function is used when data is being
+#appended to output SQLite database in the addDBTable or addDBRows functions.
+#
+#Arguments
+#
+#con:       Connection to SQLite database.
+#
+#tableName: Name of table in SQLite database.
+#
+#data:      Input dataframe whose column data types will compared against data
+#           types in argument tableName.
+#
+#debug:     Logical variable that determines if debug information should be
+#           printed to console. By default this argument set to FALSE.
+#
+#Value
+#
+#data frame
+################################################################################
+
+##'
+#' Check and Convert Data Frame Column Types to Match SQLite Table (checkDataTypes)
+#'
+#' Checks if column data types in a data frame match the field types in a SQLite database table. Converts columns as needed.
+#'
+#' @param con Connection to SQLite database.
+#' @param tableName Name of table in SQLite database.
+#' @param data Input data frame whose column types will be checked and converted.
+#' @param debug Logical; if TRUE, prints debug output to R console. Default FALSE.
+#'
+#' @returns Data frame with columns cast to correct types.
+#'
+#' @examples
+#' checkDataTypes(con, "FVS_STANDINIT", df)
+#'
+#' @export
+checkDataTypes <- function(con,
+                           tableName,
+                           data,
+                           debug = F)
+{
+
+  #Extract field names and data types for tableName
+  tableDefs <- RSQLite::dbGetQuery(con,
+                                   paste0("PRAGMA table_info('",
+                                          tableName,
+                                          "')"))[,c(2,3)]
+
+  #Obtain column names from data
+  dfCols <- colnames(data)
+
+  #Start loop across column names in data
+  for(i in 1:length(dfCols))
+  {
+    colName <- dfCols[i]
+
+    #Determine type of colName
+    colType <- typeof(data[[colName]])
+
+    #Find column in tableDefs
+    colIndex <- match(colName, tableDefs$name)
+
+    #If colName is not in tableDefs skip to next iteration in loop
+    if(is.na(colIndex)) next
+
+    #Obtain data type of field
+    fieldType <- tableDefs$type[colIndex]
+
+    #Get R version of fieldType
+    fieldType <- convertType(fieldType, 2)
+
+    #If debug, print column name, field type and column type
+    if(debug)
+    {
+      cat("Column name:", colName, "\n")
+      cat("Field type:", fieldType, "\n")
+      cat("Column type:", colType, "\n")
+    }
+
+    #Check if colType and fieldType are the same. If they are, skip to the next
+    #iteration
+    if(colType == fieldType)
+    {
+      if(debug) cat("Data type of", colName, "is a match.", "\n", "\n")
+      next
+    }
+
+    #Types did not match
+    else
+    {
+      #If field type is double, convert colName to double
+      if(fieldType == "double")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.double(data[,i])
+      }
+
+      #If field type is integer, convert colName to integer
+      else if(fieldType == "integer")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.integer(data[,i])
+      }
+
+      #If field type is anything else, convert to character
+      else
+      {
+        if(debug) cat(colName, "being converted to character", "\n", "\n")
+        data[,i]<-as.character(data[,i])
+      }
+    }
+  }
+
+  return(data)
+}
+
+################################################################################
+#Function: deleteFiles
+#
+#This function takes in a character vector containing directory paths and file
+#names and deletes each file if they exist.
+#
+#Arguments
+#
+#files: Character vector of directory paths and file names that will be deleted
+#       if they exist.
+#
+#recur: Logical variable used to signal if recursive deletion should occur
+#       if TRUE. By default, this argument is set to FALSE.
+#Value
+#
+#Integer value of 0.
+################################################################################
+
+##'
+#' Delete Files or Directories (deleteFiles)
+#'
+#' Deletes files or directories specified in a character vector.
+#'
+#' @param files Character vector of directory paths and file names to delete.
+#' @param recur Logical; if TRUE, deletes recursively. Default FALSE.
+#'
+#' @returns Integer value of 0 (invisible).
+#'
+#' @examples
+#' deleteFiles(c("file1.db", "file2.db"), recur = TRUE)
+#'
+#' @export
+deleteFiles <- function(files = c(),
+                        recur = FALSE)
+{
+  #If there are no files specified, return
+  if(length(files) <= 0) invisible(0)
+
+  #Loop across files and delete
+  for(file in files)
+  {
+    if(file.exists(file))
+    {
+      retCode <- unlink(x = file,
+                        recursive = recur)
+
+      if(retCode == 0)
+      {
+        cat(file, "was sucessfully deleted.", "\n")
+      }
+
+      else
+      {
+        cat(file, "was not sucessfully deleted.", "\n")
+      }
+    }
+  }
+
+  invisible(0)
+}
+
+################################################################################
+#Function: fvsDBTable
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function takes in a database table name and checks if it is an input FVS
+#table name.
+#
+#FVS tables:
+#"FVS_STANDINIT"
+#"FVS_TREEINIT"
+#"FVS_PLOTINIT"
+#"FVS_STANDINIT_PLOT"
+#"FVS_STANDINIT_COND"
+#"FVS_PLOTINIT_PLOT"
+#"FVS_TREEINIT_PLOT"
+#"FVS_TREEINIT_COND"
+#
+#Arguments
+#
+#dbTable:  Character string pertaining to directory to name of database table.
+#
+#Value
+#
+#TRUE if database table name is an input FVS table name and FALSE if not.
+################################################################################
+
+##'
+#' Check if Table Name is FVS Input Table (fvsDBTable)
+#'
+#' Checks if a database table name is an input FVS table name.
+#'   - FVS tables:
+#'   - "FVS_STANDINIT"
+#'   - "FVS_TREEINIT"
+#'   - "FVS_PLOTINIT"
+#'   - "FVS_STANDINIT_PLOT"
+#'   - "FVS_STANDINIT_COND"
+#'   - "FVS_PLOTINIT_PLOT"
+#'   - "FVS_TREEINIT_PLOT"
+#'   - "FVS_TREEINIT_COND"
+#'
+#' @param dbTable Character string for database table name.
+#'
+#' @returns TRUE if database table name is an input FVS table name, FALSE otherwise.
+#'
+#' @examples
+#' fvsDBTable("FVS_STANDINIT")
+#'
+#' @export
+fvsDBTable <- function(dbTable = "")
+{
+  fvsTable <- FALSE
+
+  fvsTable <- dbTable %in% c("FVS_STANDINIT",
+                             "FVS_TREEINIT",
+                             "FVS_PLOTINIT",
+                             "FVS_STANDINIT_PLOT",
+                             "FVS_STANDINIT_COND",
+                             "FVS_PLOTINIT_PLOT",
+                             "FVS_TREEINIT_PLOT",
+                             "FVS_TREEINIT_COND")
+
+  return(fvsTable)
+}
+
+################################################################################
+#Function: getDataTypes
+#
+#This function takes in directory path to sqlite database and database table
+#name an returns a named list of fields and associated data types for the
+#specified database table.
+#
+#
+#Arguments
+#
+#db:      Connection to SQLite database.
+#
+#dbTable: Character string pertaining to name of database table in db argument.
+#
+#Value
+#
+#Named list containing field names and associated data types for all fields in
+#dbTable.
+################################################################################
+
+##'
+#' Get Data Types for SQLite Table Fields (getDataTypes)
+#'
+#' Returns a named vector of field names and associated data types for all fields in a SQLite database table.
+#'
+#' @param con Connection to SQLite database.
+#' @param dbTable Character string for database table name.
+#'
+#' @returns Named vector of field names and data types.
+#'
+#' @examples
+#' getDataTypes(con, "FVS_STANDINIT")
+#'
+#' @export
+getDataTypes <- function(con,
+                         dbTable = "")
+{
+  #If dbTable does not exist in db, return empty vector
+  if(!RSQLite::dbExistsTable(conn = con,
+                             name = dbTable))
+  {
+    return(c())
+  }
+
+  #Get name of fields and datatypes
+  tableDefs <- RSQLite::dbGetQuery(con,
+                                   paste0("PRAGMA table_info('",
+                                          dbTable,
+                                          "')"))[,c(c("name", "type"))]
+
+  #Make named vector from variables and data types
+  dataTypes<- tableDefs$type
+  names(dataTypes) <- toupper(tableDefs$name)
+
+  return(dataTypes)
+}
+
+################################################################################
+#Function: collectDBpaths
+#
+#This function takes in a character vector of directory paths and file names to
+#SQLite databases or zipped folder and returns an updated character vector of
+#directory paths and file names to SQLite databases. The updated character
+#vector can contain additional .db paths.
+#
+#
+#Arguments
+#
+#dbIn:     Character vector containing directory paths and file names to SQLite
+#          database or zipped folders.
+#
+#unzipDir: Directory path to folder where contents of zipped folders will be
+#          stored.
+#
+#Value
+#
+#Character vector of directory paths and file names to SQLite databases.
+################################################################################
+
+##'
+#' Collect SQLite Database Paths (collectDBPaths)
+#'
+#' Takes a character vector of directory paths and file names to SQLite databases or zipped folders and returns an updated vector of database paths.
+#'
+#' @param dbIn Character vector of directory paths and file names to SQLite databases or zipped folders.
+#' @param unzipDir Directory path to folder where contents of zipped folders will be stored.
+#'
+#' @returns Character vector of directory paths and file names to SQLite databases.
+#'
+#' @examples
+#' collectDBPaths(c("db1.db", "db2.zip"))
+#'
+#' @export
+collectDBPaths <- function(dbIn = c(),
+                           unzipDir = "")
+{
+  #If length of dbIn is 0, return dbIn
+  if(length(dbIn) <= 0)
+  {
+    return(dbIn)
+  }
+
+  #If unzipDir does not exist, create it
+  if(!file.exists(unzipDir))
+  {
+    unzipDir <- paste(getwd(),
+                      "xxxvegClassdbCompileUnzipxxx",
+                      sep = "/")
+  }
+
+  #Initialize dbInUpdate. This is a vector that will be used to store input
+  #directory paths.
+  dbInUpdate <- vector(mode = "character")
+
+  #Loop through dbIn and check if files are not .db or .zip. If a file is a .zip
+  #then unzip it to unzipDir. All db files will be added to dbInUpdate.
+  for(i in 1:length(dbIn))
+  {
+    db <- dbIn[i]
+
+    cat("Processing db:", db, "\n")
+
+    #Grab file extension for db
+    fileExtIn<-sub("(.*)\\.","",db)
+
+    cat("File extension:",
+        fileExtIn,
+        "\n",
+        "\n")
+
+    #If the file extension of db is not .db or .zip then stop with error message.
+    if(!fileExtIn %in% c("db", "zip", "sqlite"))
+    {
+      cat(db, "is not a zipped folder or sqlite database.", "\n")
+      next
+    }
+
+    #If the file is a zip file, then it will be unzipped into xxxdbCompilexxx
+    if(fileExtIn == "zip")
+    {
+
+      cat("Unzipping:", db, "to", unzipDir, "\n", "\n")
+
+      unzip(zipfile = db,
+            exdir = unzipDir)
+
+      #Now list all the files that contain .db or .sqlite in the name.
+      #Recursive argument is set to true so any sub directories are checked for
+      #db files as well.
+      dbList <- c(list.files(unzipDir,
+                           pattern = "\\.db",
+                           full.names = T,
+                           recursive = T),
+                  list.files(unzipDir,
+                             pattern = "\\.sqlite",
+                             full.names = T,
+                             recursive = T))
+
+      #If dbList is empty move to next iteration of loop
+      if(length(dbList) <= 0)
+      {
+        cat("No .db or .sqlite files found in", db, "\n")
+        next
+      }
+
+      #If dbList has at least one value then append the values in dbList to
+      #dbInUpdate.
+      else
+      {
+        dbInUpdate <- c(dbInUpdate, dbList)
+      }
+    }
+
+    #Dealing with .db file. This file will be appended to dbInUpdate.
+    else
+    {
+      dbInUpdate <- c(dbInUpdate, db)
+    }
+  }
+
+  return(dbInUpdate)
+}
+
+################################################################################
+#Function: correctSp
+#
+#This function takes in a USDA plant symbol and returns a corrected USDA plant
+#symbol if input is 2TD or 2TE. This function could be expanded to account for
+#other erroneous plant symbols.
+#
+#Arguments
+#
+#sp: Character string corresponding to USDA plant symbol.
+#
+#Value
+#
+#USDA plant symbol
+################################################################################
+#' Correct USDA Plant Symbol (correctSp)
+#'
+#' Takes in a USDA plant symbol and returns a corrected symbol if input is 2TD or 2TE. Can be expanded for other corrections.
+#'
+#' @param sp Character string corresponding to USDA plant symbol.
+#'
+#' @returns Corrected USDA plant symbol (character).
+#'
+#' @examples
+#' correctSp("2TE")
+#' correctSp("2TD")
+#' correctSp("PIPO")
+#'
+#'@export
+correctSp <- function(sp = "2TB")
+{
+  sp <- toupper(sp)
+  spCorrect <- sp
+
+  if(sp == "2TE") spCorrect <- "2TN"
+  if(sp == "2TD") spCorrect <- "2TB"
+
+  return(spCorrect)
+}
