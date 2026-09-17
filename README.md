@@ -62,22 +62,25 @@ flowchart TB
 - Duplicate custom attribute names are automatically renamed with a `_2` suffix so processing can continue.
 
 ## Getting started
-
-Open `vegClass2.0.Rproj` to work in the full project with the main scripts and description files available together. The scripts can also be opened and run from other project spaces if needed.
+Run the following lines of code to install vegClass2.0
+`install.packages("remotes")`
+`remotes::install_github("https://github.com/AbbyAchtenhagen-USDA/VegClass2.0")`
+`library(vegClass2.0)`
 
 This repository includes two primary ways to run vegClass:
 
 - `run_vegClass.R` runs the main processing workflow directly.
-- `app.R` provides a draft Shiny interface that runs the same workflow and auto-fills inputs from `run_vegClass.R`.
+-  running `runVegClassApp()` or the `app.R` provides a draft Shiny interface that runs the same workflow and auto-fills inputs from `run_vegClass.R`.
+
 
 The app allows inputs to be edited before execution, supports viewing output `.csv` files directly in the interface, and shows flowcharts explaining classification logic when you click output values. You can also load an output `.csv` that was not produced by the app in order to inspect flowcharts or generate plots.
 
 ## Included supporting files
 
-- `R/custom_project_attr_template.r` is a starting template for building a custom function that vegClass can run.
+- `R/custom_project_attr_template.r` is a starting template for building a custom function that vegClass can run. It can be found in the `R` folder
 - `attribute_logic_dictionary_detailed.md` describes how each output attribute is generated.
-- A sample FVS output database is included in the folder for convenience.
-- `CustomVars_vegClass_BKNF.xlsx` is the original vegClass custom-variable "order form" and can be referenced through `customVars` if you want to use custom variables.
+- `CustomVars_vegClass.xlsx` is the original vegClass custom-variable "order form" and can be referenced through `customVars` if you want to use the provided custom variables.
+- `ADD_NEW_REGION.md` describes how to permanently add in a new region or project classification.
 
 ## Notes
 
