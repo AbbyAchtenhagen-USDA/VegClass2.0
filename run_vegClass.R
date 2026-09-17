@@ -1,46 +1,31 @@
 ### Use this script to run vegClass without the App ###
 ### Script will also populate App with all inputs below ###
 
-##NOTE##
-#run "devtools::document()" in the R console to get access to the help files through R
-#once that is run, you should be able to type in "?" with a function name to see
-#the R documentation e.g. "?main" and press enter
-
 
 ### Scroll down to USER INPUTS ###
 
-# Set working directory to the nearest folder containing an .Rproj file.
-file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
-start_dir <- if (length(file_arg) > 0) {
-  dirname(normalizePath(sub("^--file=", "", file_arg[1]), winslash = "/", mustWork = TRUE))
-} else {
-  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
-}
+##install vegClass2.0 from github, only needs to be installed once
+# install.packages("remotes")
+# remotes::install_github("https://github.com/AbbyAchtenhagen-USDA/VegClass2.0")
 
-project_dir <- start_dir
-repeat {
-  if (length(list.files(project_dir, pattern = "\\.Rproj$", full.names = TRUE)) > 0) break
-  parent_dir <- dirname(project_dir)
-  if (identical(parent_dir, project_dir)) stop("No .Rproj file found in current directory or parent directories.")
-  project_dir <- parent_dir
-}
-setwd(project_dir)
+library(vegClass2.0)
 
 # Ensure required packages are installed and loaded.
-cran_packages <- c("foreach", "doSNOW", "RSQLite", "devtools", "parallel")
-missing_packages <- cran_packages[!(cran_packages %in% installed.packages()[, "Package"])]
+cran_packages <- c("foreach", "doSNOW", "RSQLite", "devtools")
+missing_packages <- cran_packages[!vapply(
+  cran_packages,
+  requireNamespace,
+  logical(1),
+  quietly = TRUE
+)]
 if (length(missing_packages) > 0) {
   install.packages(missing_packages, dependencies = TRUE)
 }
 
 invisible(lapply(cran_packages, library, character.only = TRUE))
 
-# Source all .r files from the specified directory
-r_files_path <- file.path(getwd(), "R")
-
-r_files <- list.files(r_files_path, pattern = "\\.r$", full.names = TRUE)
-for (file in r_files) {
-  source(file)
+if (!requireNamespace("vegClass2.0", quietly = TRUE)) {
+  stop("Package 'vegClass2.0' is not installed. Install it first, then rerun this script.")
 }
 
 ########----------USER INPUTS------------########
@@ -58,7 +43,7 @@ output_csv_name <- "BLK_HILLS_vegClass10110_MPSG.csv"
 
 # Set number of cores to do parallel processing on. Currently set up to select half
 # of the machines cores but it can be set to any number in the main function.
-num_cores<- detectCores()/2
+num_cores<- parallel::detectCores()/2
 
 # Set run title(s) to process. Use c("run1", "run2") for multiple runs.
 runTitles <- c("10110_NG")
@@ -124,7 +109,7 @@ output <- file.path(output_dir, output_csv_name)
 
 ########---------- RUNNING MAIN FUNCTION ------------########
 
-main(input = input,
+  main(input = input,
   num_cores = num_cores,
   output = output,
   runTitles = runTitles,
