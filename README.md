@@ -49,3 +49,43 @@ flowchart TB
 	class R1O,R2O,R3O,R8O,MPO,CUO,COREO out
 	class OPT,OALL opt
 ```
+
+## Featured updates
+
+- Parallel processing in `main()` to speed up stand processing.
+- Automatic input-database indexing to improve runtime.
+- User control over the number of processing cores.
+- `Stand_CN` included in the output `.csv`.
+- Option to remove database indices after processing.
+- Support for custom classification scripts.
+- Option to remove selected attributes from the final `.csv`.
+- Duplicate custom attribute names are automatically renamed with a `_2` suffix so processing can continue.
+
+## Getting started
+
+Open `vegClass2.0.Rproj` to work in the full project with the main scripts and description files available together. The scripts can also be opened and run from other project spaces if needed.
+
+This repository includes two primary ways to run vegClass:
+
+- `run_vegClass.R` runs the main processing workflow directly.
+- `app.R` provides a draft Shiny interface that runs the same workflow and auto-fills inputs from `run_vegClass.R`.
+
+The app allows inputs to be edited before execution, supports viewing output `.csv` files directly in the interface, and shows flowcharts explaining classification logic when you click output values. You can also load an output `.csv` that was not produced by the app in order to inspect flowcharts or generate plots.
+
+## Included supporting files
+
+- `R/custom_project_attr_template.r` is a starting template for building a custom function that vegClass can run.
+- `attribute_logic_dictionary_detailed.md` describes how each output attribute is generated.
+- A sample FVS output database is included in the folder for convenience.
+- `CustomVars_vegClass_BKNF.xlsx` is the original vegClass custom-variable "order form" and can be referenced through `customVars` if you want to use custom variables.
+
+## Notes
+
+- A couple of warnings may appear in the R console when running the app script, but the app can still run successfully.
+- If a syntax error appears after clicking a value in the app, close the popup and try clicking again.
+- The app is still a work in progress.
+- Plots can take a while to render when many variables are selected.
+
+## Support
+
+Questions can be sent to Abby at `abby.acthenhagen@usda.gov`.
