@@ -1,23 +1,63 @@
 # Ensure required packages are installed and loaded.
 cran_packages <- c("shiny", "bslib", "fs", "DT", "plotly", "tools")
-missing_packages <- cran_packages[!(cran_packages %in% installed.packages()[, "Package"])]
+missing_packages <- cran_packages[!vapply(
+  cran_packages,
+  requireNamespace,
+  logical(1),
+  quietly = TRUE
+)]
 if (length(missing_packages) > 0) {
   install.packages(missing_packages, dependencies = TRUE)
 }
 
 invisible(lapply(cran_packages, library, character.only = TRUE))
 
-# This app lives at package root and manually sources scripts from R/ below.
-# Disable Shiny's automatic R/ autoload to avoid duplicate sourcing warnings.
+if (!exists("app_root_path", inherits = FALSE)) {
+  app_root_path <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+}
+default_r_files_path <- file.path(app_root_path, "R")
+repo_r_files_path <- normalizePath(file.path(app_root_path, "..", "..", "R"), winslash = "/", mustWork = FALSE)
+r_files_path <- if (dir.exists(default_r_files_path)) default_r_files_path else repo_r_files_path
+vegclass_package_name <- "vegClass2.0"
+
+# This app lives at package root.
+# Disable Shiny's automatic R/ autoload so we can control whether functions
+# come from the installed package or local source files.
 options(shiny.autoload.r = FALSE)
 
-# Source all vegClass scripts from the local package R directory.
-# Source all .r files from the specified directory
-r_files_path <- file.path(getwd(), "R")
-r_files <- list.files(r_files_path, pattern = "\\.r$", full.names = TRUE)
-for (file in r_files) {
-  source(file)
+load_vegclass_runtime <- function() {
+  if (isTRUE(getOption("vegclass.app.use_installed", TRUE)) &&
+      requireNamespace(vegclass_package_name, quietly = TRUE)) {
+    library(vegclass_package_name, character.only = TRUE)
+    return(list(
+      runtime = "installed-package",
+      main_fn = get("main", envir = asNamespace(vegclass_package_name))
+    ))
+  }
+
+  if (!dir.exists(r_files_path)) {
+    stop(
+      sprintf(
+        "Could not load %s: package is not installed and local R scripts were not found at %s",
+        vegclass_package_name,
+        r_files_path
+      )
+    )
+  }
+
+  local_r_files <- list.files(r_files_path, pattern = "\\.r$", full.names = TRUE)
+  for (file in local_r_files) {
+    source(file)
+  }
+
+  list(
+    runtime = "local-source",
+    main_fn = get("main", mode = "function")
+  )
 }
+
+vegclass_runtime <- load_vegclass_runtime()
+vegclass_main <- vegclass_runtime$main_fn
 
 extract_quoted_assignment <- function(lines, var_name) {
   pattern <- paste0("^\\s*", var_name, "\\s*<-\\s*\"([^\"]+)\"")
@@ -161,6 +201,31 @@ read_markdown_attribute_names <- function(md_path, section_heading = "Attribute 
   tokens[!grepl("*", tokens, fixed = TRUE)]
 }
 
+read_markdown_file <- function(md_path) {
+  if (!file.exists(md_path)) return(NULL)
+  paste(readLines(md_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+}
+
+render_markdown_text <- function(md_text) {
+  if (is.null(md_text) || !nzchar(md_text)) {
+    return(p("Markdown content is empty."))
+  }
+
+  # Prefer commonmark when available; fall back to markdown; else show raw text.
+  if (requireNamespace("commonmark", quietly = TRUE)) {
+    return(HTML(commonmark::markdown_html(md_text)))
+  }
+
+  if (requireNamespace("markdown", quietly = TRUE)) {
+    return(HTML(markdown::markdownToHTML(text = md_text, fragment.only = TRUE)))
+  }
+
+  tagList(
+    p("Install 'commonmark' or 'markdown' to render rich formatting. Showing plain text for now."),
+    tags$pre(style = "white-space: pre-wrap; margin-bottom: 0;", md_text)
+  )
+}
+
 get_region_doc_filename <- function(region_value) {
   switch(
     toupper(trimws(as.character(region_value %||% ""))),
@@ -222,7 +287,7 @@ load_run_defaults <- function() {
     num_cores = max(1L, floor(detected_cores / 2))
   )
 
-  run_defaults_path <- file.path(getwd(), "run_vegClass.R")
+  run_defaults_path <- file.path(app_root_path, "run_vegClass.R")
   if (!file.exists(run_defaults_path)) {
     return(defaults)
   }
@@ -419,7 +484,7 @@ ui <- page_fillable(
   tags$head(
     tags$script(src = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"),
     tags$script(HTML("\n      if (window.mermaid) {\n        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default', flowchart: { htmlLabels: true } });\n      }\n\n      function rerenderMermaidById(id) {\n        setTimeout(function() {\n          var el = document.getElementById(id);\n          if (!el || !window.mermaid) return;\n          var source = el.dataset.mermaidSource;\n          if (!source) {\n            source = (el.textContent || '').trim();\n            if (source) el.dataset.mermaidSource = source;\n          }\n\n          if (source) {\n            el.textContent = source;\n          }\n\n          try {\n            el.removeAttribute('data-processed');\n            mermaid.run({ nodes: [el] });\n          } catch (e) {\n            console.error('Mermaid render failed:', e);\n          }\n        }, 70);\n      }\n\n      Shiny.addCustomMessageHandler('renderMermaid', function(x) {\n        rerenderMermaidById(x.id);\n      });\n\n      Shiny.addCustomMessageHandler('zoomMermaidById', function(x) {\n        var el = document.getElementById(x.id);\n        if (!el) return;\n\n        var current = parseFloat(el.dataset.zoomScale || '1');\n        if (!isFinite(current) || current <= 0) current = 1;\n\n        var next = current;\n        if (x && x.reset) {\n          next = 1;\n        } else {\n          var factor = Number((x && x.scale) || 1);\n          if (!isFinite(factor) || factor <= 0) factor = 1;\n          next = current * factor;\n        }\n\n        next = Math.max(0.5, Math.min(3, next));\n        el.dataset.zoomScale = String(next);\n        el.style.transformOrigin = 'top left';\n        el.style.transform = 'scale(' + next + ')';\n      });\n\n      Shiny.addCustomMessageHandler('setFlowchartModalClass', function(x) {\n        setTimeout(function() {\n          var modal = document.querySelector('.modal.show');\n          if (!modal) return;\n          var dialog = modal.querySelector('.modal-dialog');\n          if (!dialog) return;\n          dialog.classList.add('flowchart-modal');\n        }, 20);\n      });\n\n      Shiny.addCustomMessageHandler('toggleFlowchartModal', function(x) {\n        var modal = document.querySelector('.modal.show');\n        if (!modal) return;\n        var dialog = modal.querySelector('.modal-dialog');\n        if (!dialog) return;\n\n        dialog.classList.toggle('flowchart-expanded');\n\n        if (dialog.classList.contains('flowchart-expanded')) {\n          dialog.style.width = '';\n          dialog.style.maxWidth = '';\n          var content = dialog.querySelector('.modal-content');\n          var wrap = dialog.querySelector('.flowchart-wrap');\n          if (content) content.style.maxHeight = '';\n          if (wrap) {\n            wrap.style.minHeight = '';\n            wrap.style.maxHeight = '';\n          }\n        }\n\n        rerenderMermaidById(x.id);\n      });\n\n      Shiny.addCustomMessageHandler('enableFlowchartResize', function(x) {\n        setTimeout(function() {\n          var modal = document.querySelector('.modal.show');\n          if (!modal) return;\n          var dialog = modal.querySelector('.modal-dialog');\n          if (!dialog) return;\n          var content = dialog.querySelector('.modal-content');\n          var wrap = dialog.querySelector('.flowchart-wrap');\n          var handle = dialog.querySelector('.flowchart-resize-handle');\n          if (!content || !wrap || !handle || handle.dataset.bound === '1') return;\n\n          handle.dataset.bound = '1';\n\n          handle.addEventListener('mousedown', function(ev) {\n            ev.preventDefault();\n            ev.stopPropagation();\n\n            var startX = ev.clientX;\n            var startY = ev.clientY;\n            var startW = dialog.getBoundingClientRect().width;\n            var startH = content.getBoundingClientRect().height;\n\n            dialog.classList.remove('flowchart-expanded');\n            document.body.classList.add('flowchart-resizing');\n\n            function onMove(mev) {\n              var dx = mev.clientX - startX;\n              var dy = mev.clientY - startY;\n\n              var newW = Math.max(760, Math.min(window.innerWidth - 20, startW + dx));\n              var newH = Math.max(520, Math.min(window.innerHeight - 20, startH + dy));\n\n              dialog.style.width = newW + 'px';\n              dialog.style.maxWidth = newW + 'px';\n              content.style.maxHeight = newH + 'px';\n\n              var wrapHeight = Math.max(320, newH - 230);\n              wrap.style.minHeight = wrapHeight + 'px';\n              wrap.style.maxHeight = wrapHeight + 'px';\n            }\n\n            function onUp() {\n              document.removeEventListener('mousemove', onMove);\n              document.removeEventListener('mouseup', onUp);\n              document.body.classList.remove('flowchart-resizing');\n              rerenderMermaidById(x.id);\n            }\n\n            document.addEventListener('mousemove', onMove);\n            document.addEventListener('mouseup', onUp);\n          });\n        }, 40);\n      });\n    ")),
-    tags$style(HTML("\n      .custom-top-bar {\n        background-color: #2C3E50;\n        color: #FFFFFF;\n        padding: 12px 20px;\n        font-size: 22px;\n        width: 100%;\n      }\n      .main-panel-tabs > .nav {\n        background-color: #2C3E50;\n        padding: 0 10px;\n        margin-bottom: 15px;\n        border-radius: 4px;\n      }\n      .main-panel-tabs > .nav .nav-link {\n        color: rgba(255,255,255,0.7);\n        border: none !important;\n        border-radius: 0;\n        padding: 12px 20px !important;\n        font-size: 16px;\n      }\n      .main-panel-tabs > .nav .nav-link:hover {\n        color: rgba(255,255,255,0.9);\n      }\n      .main-panel-tabs > .nav .nav-link.active {\n        color: #FFFFFF !important;\n        border-bottom: 3px solid #18BC9C !important;\n        background: transparent !important;\n      }\n      .status-block {\n        background: #F8F9FA;\n        border: 1px solid #DEE2E6;\n        border-radius: 6px;\n        padding: 10px;\n        margin-bottom: 10px;\n      }\n      .flowchart-wrap {\n        border: 1px solid #DEE2E6;\n        border-radius: 6px;\n        background: #FFFFFF;\n        padding: 10px;\n        min-height: 420px;\n        max-height: 55vh;\n        overflow: auto;\n      }\n      .flowchart-wrap .mermaid {\n        width: 100%;\n      }\n      .flowchart-wrap .mermaid svg {\n        display: block;\n        margin-left: auto;\n        margin-right: auto;\n      }\n      .modal-dialog.flowchart-modal {\n        width: 95vw;\n        max-width: 95vw;\n      }\n      .modal-dialog.flowchart-modal .modal-content {\n        position: relative;\n        max-height: 90vh;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded {\n        width: 99vw;\n        max-width: 99vw;\n        margin: 0.5rem auto;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded .modal-content {\n        max-height: 97vh;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded .flowchart-wrap {\n        min-height: 70vh;\n        max-height: 80vh;\n      }\n      .flowchart-resize-handle {\n        position: absolute;\n        right: 10px;\n        bottom: 10px;\n        width: 18px;\n        height: 18px;\n        cursor: nwse-resize;\n        border-right: 2px solid #7F8C8D;\n        border-bottom: 2px solid #7F8C8D;\n        opacity: 0.75;\n        z-index: 5;\n      }\n      .flowchart-resize-handle:hover {\n        opacity: 1;\n      }\n      .flowchart-resizing {\n        user-select: none;\n      }\n    "))
+    tags$style(HTML("\n      .custom-top-bar {\n        background-color: #2C3E50;\n        color: #FFFFFF;\n        padding: 12px 20px;\n        font-size: 22px;\n        width: 100%;\n      }\n      .main-tab-buttons {\n        display: flex;\n        gap: 0;\n        flex-wrap: wrap;\n        background-color: #2C3E50;\n        padding: 0 10px;\n        margin-bottom: 15px;\n        border-radius: 4px;\n      }\n      .main-tab-buttons .btn {\n        border: none !important;\n        border-radius: 0;\n        padding: 12px 20px !important;\n        font-size: 16px;\n        box-shadow: none !important;\n      }\n      .main-tab-buttons .btn-outline-light {\n        color: rgba(255,255,255,0.7);\n        background: transparent;\n      }\n      .main-tab-buttons .btn-outline-light:hover,\n      .main-tab-buttons .btn-outline-light:focus {\n        color: rgba(255,255,255,0.95);\n        background: transparent;\n      }\n      .main-tab-buttons .btn-primary {\n        color: #FFFFFF;\n        background: transparent;\n        border-bottom: 3px solid #18BC9C !important;\n      }\n      .main-panel-tabs .nav,\n      .main-panel-tabs .nav-tabs,\n      .main-panel-tabs ul.nav {\n        display: none !important;\n      }\n      .status-block {\n        background: #F8F9FA;\n        border: 1px solid #DEE2E6;\n        border-radius: 6px;\n        padding: 10px;\n        margin-bottom: 10px;\n      }\n      .flowchart-wrap {\n        border: 1px solid #DEE2E6;\n        border-radius: 6px;\n        background: #FFFFFF;\n        padding: 10px;\n        min-height: 420px;\n        max-height: 55vh;\n        overflow: auto;\n      }\n      .flowchart-wrap .mermaid {\n        width: 100%;\n      }\n      .flowchart-wrap .mermaid svg {\n        display: block;\n        margin-left: auto;\n        margin-right: auto;\n      }\n      .modal-dialog.flowchart-modal {\n        width: 95vw;\n        max-width: 95vw;\n      }\n      .modal-dialog.flowchart-modal .modal-content {\n        position: relative;\n        max-height: 90vh;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded {\n        width: 99vw;\n        max-width: 99vw;\n        margin: 0.5rem auto;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded .modal-content {\n        max-height: 97vh;\n      }\n      .modal-dialog.flowchart-modal.flowchart-expanded .flowchart-wrap {\n        min-height: 70vh;\n        max-height: 80vh;\n      }\n      .flowchart-resize-handle {\n        position: absolute;\n        right: 10px;\n        bottom: 10px;\n        width: 18px;\n        height: 18px;\n        cursor: nwse-resize;\n        border-right: 2px solid #7F8C8D;\n        border-bottom: 2px solid #7F8C8D;\n        opacity: 0.75;\n        z-index: 5;\n      }\n      .flowchart-resize-handle:hover {\n        opacity: 1;\n      }\n      .flowchart-resizing {\n        user-select: none;\n      }\n    "))
   ),
   tags$script(HTML("\n    function setViewOutputSidebar(tabValue) {\n      var layout = document.querySelector('.bslib-sidebar-layout');\n      if (!layout) return;\n      if (tabValue === 'view_output_tab') {\n        layout.classList.add('hide-view-output-sidebar');\n      } else {\n        layout.classList.remove('hide-view-output-sidebar');\n      }\n    }\n\n    $(document).on('shiny:inputchanged', function(e) {\n      if (e && e.name === 'main_tabs') {\n        setViewOutputSidebar(e.value);\n      }\n    });\n\n    document.addEventListener('shiny:connected', function() {\n      setTimeout(function() {\n        if (window.Shiny && Shiny.shinyapp && Shiny.shinyapp.$inputValues) {\n          setViewOutputSidebar(Shiny.shinyapp.$inputValues.main_tabs);\n        }\n      }, 60);\n    });\n  ")),
   tags$style(HTML("\n    .bslib-sidebar-layout.hide-view-output-sidebar > .sidebar {\n      display: none !important;\n    }\n    .bslib-sidebar-layout.hide-view-output-sidebar {\n      grid-template-columns: minmax(0, 1fr) !important;\n    }\n    .bslib-sidebar-layout.hide-view-output-sidebar > .main {\n      width: 100% !important;\n      max-width: 100% !important;\n    }\n  ")),
@@ -634,6 +699,7 @@ ui <- page_fillable(
 
     div(
       class = "main-panel-tabs h-100",
+      uiOutput("main_tab_buttons"),
       navset_tab(
         id = "main_tabs",
         nav_panel(
@@ -772,7 +838,14 @@ ui <- page_fillable(
 )
 
 server <- function(input, output, session) {
-  docs_dir_path <- file.path(dirname(r_files_path), "region_descriptions")
+  docs_dir_path <- file.path(app_root_path, "region_descriptions")
+  region_doc_cache <- setNames(
+    lapply(
+      c("region_1.md", "region_2.md", "region_3.md", "region_8.md", "region_mpsg.md", "core_attributes.md"),
+      function(doc_name) read_markdown_file(file.path(docs_dir_path, doc_name))
+    ),
+    c("region_1.md", "region_2.md", "region_3.md", "region_8.md", "region_mpsg.md", "core_attributes.md")
+  )
   input_db_selected <- reactiveVal(normalize_r_path(run_defaults$input_db %||% ""))
   output_dir_selected <- reactiveVal(normalize_r_path(run_defaults$output_dir %||% ""))
   default_run_titles <- trimws(strsplit(run_defaults$runTitles %||% "", ",")[[1]])
@@ -787,6 +860,48 @@ server <- function(input, output, session) {
     selected = default_run_titles,
     server = TRUE
   )
+
+  output$main_tab_buttons <- renderUI({
+    active_tab <- input$main_tabs %||% "about_tab"
+    make_tab_button <- function(id, label, value, icon_name) {
+      btn_class <- if (identical(active_tab, value)) "btn btn-primary" else "btn btn-outline-light"
+      actionButton(
+        inputId = id,
+        label = label,
+        icon = icon(icon_name),
+        class = btn_class
+      )
+    }
+
+    div(
+      class = "main-tab-buttons",
+      make_tab_button("show_about_tab", "About", "about_tab", "circle-info"),
+      make_tab_button("show_config_tab", "1. Configure", "config_tab", "sliders"),
+      make_tab_button("show_run_tab", "2. Run VegClass", "run_tab", "play"),
+      make_tab_button("show_view_output_tab", "3. View Output", "view_output_tab", "table"),
+      make_tab_button("show_plot_tab", "4. Plot Output", "plot_tab", "chart-column")
+    )
+  })
+
+  observeEvent(input$show_about_tab, {
+    bslib::nav_select("main_tabs", selected = "about_tab", session = session)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$show_config_tab, {
+    bslib::nav_select("main_tabs", selected = "config_tab", session = session)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$show_run_tab, {
+    bslib::nav_select("main_tabs", selected = "run_tab", session = session)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$show_view_output_tab, {
+    bslib::nav_select("main_tabs", selected = "view_output_tab", session = session)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$show_plot_tab, {
+    bslib::nav_select("main_tabs", selected = "plot_tab", session = session)
+  }, ignoreInit = TRUE)
 
   observeEvent(input$main_tabs, {
     if (identical(input$main_tabs, "about_tab")) {
@@ -815,7 +930,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$browse_output_dir, {
-    selected <- tryCatch(utils::choose.dir(default = getwd(), caption = "Select Output Directory"), error = function(e) "")
+    selected <- tryCatch(utils::choose.dir(default = app_root_path, caption = "Select Output Directory"), error = function(e) "")
     selected <- normalize_r_path(selected)
     if (!nzchar(selected)) return()
     output_dir_selected(selected)
@@ -943,7 +1058,7 @@ server <- function(input, output, session) {
 
       # Allow entering just a script name if file lives in local R/ folder.
       if (!grepl("[/\\\\]", raw_path)) {
-        candidates <- c(candidates, file.path(getwd(), "R", raw_path))
+        candidates <- c(candidates, file.path(r_files_path, raw_path))
       }
 
       # Allow omitting .r extension.
@@ -1067,39 +1182,23 @@ server <- function(input, output, session) {
       return(HTML("<p>No region description mapping is configured for this region.</p>"))
     }
 
-    render_md_file <- function(path, missing_label) {
-      if (!file.exists(path)) {
-        return(p(sprintf("%s not found: %s", missing_label, path)))
+    render_md_file <- function(doc_name, missing_label) {
+      md_text <- region_doc_cache[[doc_name]]
+      if (is.null(md_text)) {
+        return(p(sprintf("%s not found: %s", missing_label, file.path(docs_dir_path, doc_name))))
       }
 
-      md_text <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
-
-      # Prefer commonmark when available; fall back to markdown; else show raw text.
-      if (requireNamespace("commonmark", quietly = TRUE)) {
-        return(HTML(commonmark::markdown_html(md_text)))
-      }
-
-      if (requireNamespace("markdown", quietly = TRUE)) {
-        return(HTML(markdown::markdownToHTML(text = md_text, fragment.only = TRUE)))
-      }
-
-      tagList(
-        p("Install 'commonmark' or 'markdown' to render rich formatting. Showing plain text for now."),
-        tags$pre(style = "white-space: pre-wrap; margin-bottom: 0;", md_text)
-      )
+      render_markdown_text(md_text)
     }
-
-    region_md_path <- file.path(docs_dir_path, region_md_name)
-    core_md_path <- file.path(docs_dir_path, "core_attributes.md")
 
     tagList(
       div(
         style = "max-height: 460px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 12px;",
         h5(sprintf("Region %s Description", input$region)),
-        render_md_file(region_md_path, "Region description file"),
+        render_md_file(region_md_name, "Region description file"),
         tags$hr(),
         h5("Core Attributes"),
-        render_md_file(core_md_path, "Core attributes file")
+        render_md_file("core_attributes.md", "Core attributes file")
       )
     )
   })
@@ -5573,7 +5672,7 @@ server <- function(input, output, session) {
 
       tryCatch({
         captured <- capture_main_console(
-          main(
+          vegclass_main(
             input = input_db,
             output = output_file,
             num_cores = num_cores,
@@ -5697,7 +5796,11 @@ server <- function(input, output, session) {
 
 app <- shinyApp(ui = ui, server = server)
 
-if (interactive()) {
+if (!exists("vegclass_app_autorun", inherits = FALSE)) {
+  vegclass_app_autorun <- interactive()
+}
+
+if (isTRUE(vegclass_app_autorun)) {
   runApp(app, launch.browser = TRUE)
 } else {
   app
